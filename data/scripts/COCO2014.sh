@@ -6,9 +6,9 @@ start=`date +%s`
 if [ -z "$1" ]
   then
     # navigate to ~/data
-    echo "navigating to ~/data/ ..."
-    mkdir -p ~/data
-    cd ~/data/
+    echo "navigating to /content/SSDPytorch/data ..."
+    mkdir -p /content/SSDPytorch/data
+    cd /content/SSDPytorch/data
     mkdir -p ./coco
     cd ./coco
     mkdir -p ./images

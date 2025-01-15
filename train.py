@@ -5,6 +5,7 @@ from ssd import build_ssd
 import os
 import time
 import torch
+import torch.nn.init as init
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.optim as optim
@@ -75,6 +76,9 @@ def train():
     loc_loss, conf_loss, epoch = 0, 0, 0
 
     logger = task.get_logger()  # Get ClearML logger
+    num_epochs = 2  # Số epochs bạn muốn huấn luyện
+    epoch_size = len(dataset) // args.batch_size
+    max_iter = num_epochs * epoch_size
 
     for iteration in range(args.start_iter, cfg['max_iter']):
         if iteration in cfg['lr_steps']:
@@ -103,6 +107,7 @@ def train():
         logger.report_scalar("Loss", "Localization Loss", iteration, loss_l.item())
         logger.report_scalar("Loss", "Confidence Loss", iteration, loss_c.item())
         logger.report_scalar("Loss", "Total Loss", iteration, loss.item())
+        logger.report_scalar("Learning Rate", "LR", iteration, current_lr)
 
         # Print training progress
         if iteration % 10 == 0:
