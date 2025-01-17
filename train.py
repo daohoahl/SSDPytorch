@@ -74,11 +74,22 @@ def train():
 
     batch_iterator = iter(data_loader)
     loc_loss, conf_loss, epoch = 0, 0, 0
+    batch_iterator = iter(data_loader)  # Đặt trước vòng lặp
+    for epoch in range(num_epochs):  # Thêm vòng lặp theo epoch
+        loc_loss, conf_loss = 0, 0  # Đặt lại giá trị sau mỗi epoch
+        for iteration in range(epoch_size):
+            try:
+                images, targets = next(batch_iterator)
+            except StopIteration:
+                batch_iterator = iter(data_loader)
+                images, targets = next(batch_iterator)
+
 
     logger = task.get_logger()  # Get ClearML logger
-    num_epochs = 2  # Số epochs bạn muốn huấn luyện
+    num_epochs = 5  # Số epochs bạn muốn huấn luyện
     epoch_size = len(dataset) // args.batch_size
-    max_iter = num_epochs * epoch_size
+    max_iter = num_epochs * len(data_loader)
+
 
     for iteration in range(args.start_iter, cfg['max_iter']):
         if iteration in cfg['lr_steps']:
@@ -102,12 +113,14 @@ def train():
 
         loc_loss += loss_l.item()
         conf_loss += loss_c.item()
-
-        # Log scalars to ClearML
+        # Log per iteration
         logger.report_scalar("Loss", "Localization Loss", iteration, loss_l.item())
         logger.report_scalar("Loss", "Confidence Loss", iteration, loss_c.item())
-        logger.report_scalar("Loss", "Total Loss", iteration, loss.item())
-        logger.report_scalar("Learning Rate", "LR", iteration, current_lr)
+
+        # Sau khi hoàn thành một epoch, log tổng loss
+        if (iteration + 1) % epoch_size == 0:
+            logger.report_scalar("Loss", "Localization Loss per Epoch", epoch, loc_loss / len(data_loader))
+            logger.report_scalar("Loss", "Confidence Loss per Epoch", epoch, conf_loss / len(data_loader))
 
         # Print training progress
         if iteration % 10 == 0:
@@ -122,9 +135,11 @@ def train():
     torch.save(ssd_net.state_dict(), f"{args.save_folder}/{args.dataset}.pth")
 
 def adjust_learning_rate(optimizer, gamma, step):
-    lr = args.lr * (gamma ** step)
+    global current_lr
+    current_lr = args.lr * (gamma ** step)
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group['lr'] = current_lr
+
 
 def xavier(param):
     init.xavier_uniform(param)
